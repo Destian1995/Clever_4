@@ -1,0 +1,17 @@
+Clever_4/
+├── main.py
+├── database.py
+├── screens/
+│   ├── menu_screen.py
+│   ├── test_screen.py
+│   └── result_screen.py
+├── tasks/
+│   ├── attention.py
+│   ├── logic.py
+│   ├── processing.py
+│   ├── mental_math.py
+│   └── working_memory.py
+├── utils/
+│   └── helpers.py
+└── data/
+    └── user_progress.db
