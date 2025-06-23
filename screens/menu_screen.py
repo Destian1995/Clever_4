@@ -1,15 +1,13 @@
 from kivy.uix.screenmanager import Screen
 from kivy.lang import Builder
-from kivy.graphics import Rectangle, Color, Line
-from kivy.core.image import Image as CoreImage
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.uix.image import Image
+from kivy.uix.videoplayer import Video
 from kivy.clock import Clock
-from kivy.core.text.markup import MarkupLabel
-from kivy.graphics import Rectangle, Color
-
+from kivy.core.window import Window
+from kivy.utils import platform
+import sys
 
 KV = '''
 <StyledButton@MDRaisedButton>:
@@ -24,42 +22,45 @@ Builder.load_string(KV)
 class MenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.bg_texture = CoreImage("files/menu.png").texture
-        self.bind(size=self._update_rect, pos=self._update_rect)
-        with self.canvas.before:
-            self.rect = Rectangle(texture=self.bg_texture, size=self.size, pos=self.pos)
+        self.video = None
+        Clock.schedule_once(self.setup_background)
+        Clock.schedule_once(self.create_ui, 0.2)
 
-        Clock.schedule_once(self.create_ui, 0.1)
-
-    def _update_rect(self, *args):
-        self.rect.pos = self.pos
-        self.rect.size = self.size
+    def setup_background(self, dt):
+        self.video = Video(
+            source="files/video_menu.mp4",
+            state="play",
+            options={'eos': 'loop'},
+            allow_stretch=True,
+            keep_ratio=False
+        )
+        self.video.opacity = 0.8
+        self.video.size_hint = (1, 1)
+        self.video.pos_hint = {"center_x": 0.5, "center_y": 0.5}
+        self.add_widget(self.video, index=0)
 
     def create_ui(self, dt):
-        # Основной макет
         layout = MDBoxLayout(
             orientation="vertical",
             spacing="30dp",
             padding="20dp",
             size_hint=(None, None),
             width=300,
-            height=400,
+            height=460,
             pos_hint={"center_x": 0.5, "center_y": 0.5},
         )
-        layout.md_bg_color = [0, 0, 0, 0]
+        layout.md_bg_color = [0, 0, 0, 0.2]
 
-        # Заголовок с белым текстом и чёрной обводкой (через кастомную отрисовку)
         self.title = MDLabel(
             text="Клевер_4",
             halign="center",
             font_style="H3",
             theme_text_color="Custom",
-            text_color=(1, 1, 1, 1),  # Белый цвет текста
+            text_color=(1, 1, 1, 1),
             bold=True,
             font_size="48sp"
         )
 
-        # Кнопки
         start_btn = MDRaisedButton(
             text="Начать тест",
             on_press=self.start_test,
@@ -67,8 +68,7 @@ class MenuScreen(Screen):
             height="60dp",
             font_size="20sp",
             md_bg_color=[0.2, 0.8, 0.4, 1],
-            elevation=10,
-            pos_hint={"center_x": 0.5}
+            elevation=10
         )
 
         stats_btn = MDRaisedButton(
@@ -78,13 +78,23 @@ class MenuScreen(Screen):
             height="60dp",
             font_size="20sp",
             md_bg_color=[0.1, 0.6, 0.8, 1],
-            elevation=6,
-            pos_hint={"center_x": 0.5}
+            elevation=6
+        )
+
+        exit_btn = MDRaisedButton(
+            text="Выход",
+            on_press=self.exit_app,
+            size_hint=(1, None),
+            height="60dp",
+            font_size="20sp",
+            md_bg_color=[0.8, 0.2, 0.2, 1],
+            elevation=6
         )
 
         layout.add_widget(self.title)
         layout.add_widget(start_btn)
         layout.add_widget(stats_btn)
+        layout.add_widget(exit_btn)
         self.add_widget(layout)
 
     def start_test(self, instance):
@@ -92,3 +102,11 @@ class MenuScreen(Screen):
 
     def show_stats(self, instance):
         self.manager.current = 'result'
+
+    def exit_app(self, instance):
+        if platform == 'android':
+            from jnius import autoclass
+            PythonActivity = autoclass('org.kivy.android.PythonActivity')
+            PythonActivity.mActivity.finish()
+        else:
+            Window.close() or sys.exit()

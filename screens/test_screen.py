@@ -295,7 +295,7 @@ class TestScreen(Screen):
         result_text = (
             "[b][color=#00FF00]Верно![/color][/b]"
             if is_correct
-            else f"[color=#FF0000]Неверно.[/color]\n[color=#FFD700]Правильный ответ: {answer}[/color]"
+            else f"[color=#FF0000]Неверно.[/color]\n[color=#1E3A8A]Правильный ответ: {answer}[/color]"
         )
 
         dialog = MDDialog(
