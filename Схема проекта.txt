@@ -12,6 +12,6 @@ Clever_4/
 │   ├── mental_math.py
 │   └── working_memory.py
 ├── utils/
-│   └── helpers.py
+│   └── iq_calculator.py
 └── data/
     └── user_progress.db
