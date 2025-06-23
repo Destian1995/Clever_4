@@ -177,14 +177,39 @@ class TestScreen(Screen):
             category, sequence, question, answer = self.tasks[self.current_index]
             self.correct_answers.append(answer)
 
-            # Создаем виджеты
+            # Поле ввода и кнопка (в верхней части)
+            input_layout = MDBoxLayout(orientation='vertical', spacing="10dp", size_hint_y=None, height="120dp")
+            input_layout.pos_hint = {"top": 1}
+
+            self.answer_input = MDTextField(
+                hint_text="Введите ответ",
+                multiline=False,
+                opacity=0,
+                disabled=True,
+                size_hint_y=None,
+                height="60dp"
+            )
+
+            self.check_btn = MDRaisedButton(
+                text="Проверить",
+                on_press=self.submit_answer,
+                pos_hint={"center_x": 0.5},
+                opacity=0,
+                disabled=True
+            )
+
+            input_layout.add_widget(self.answer_input)
+            input_layout.add_widget(self.check_btn)
+
+            layout.add_widget(input_layout)
+
+            # Описание задания
             self.task_label = MDLabel(
                 text=sequence,
                 halign="center",
                 font_style="H6"
             )
 
-            # Круговой таймер
             self.countdown_label = MDLabel(
                 text="",
                 halign="center",
@@ -205,22 +230,6 @@ class TestScreen(Screen):
                 font_style="H6"
             )
 
-            self.answer_input = MDTextField(
-                hint_text="Введите ответ",
-                multiline=False,
-                opacity=0,
-                disabled=True
-            )
-
-            self.check_btn = MDRaisedButton(
-                text="Проверить",
-                on_press=self.submit_answer,
-                pos_hint={"center_x": 0.5},
-                opacity=0,
-                disabled=True
-            )
-
-            # Добавляем виджеты
             layout.add_widget(self.task_label)
 
             if self.circular_timer:
@@ -228,31 +237,17 @@ class TestScreen(Screen):
                 Clock.schedule_interval(self.circular_timer.update, 1 / 60)
 
             layout.add_widget(self.question_label)
-            layout.add_widget(self.answer_input)
-            layout.add_widget(self.check_btn)
             self.add_widget(layout)
 
-            # Таймер на скрытие последовательности
             if category not in ['логика', 'счет в уме']:
                 Clock.schedule_once(lambda dt: self.hide_sequence(category), 4)
             else:
-                _, task, question, answer = self.tasks[self.current_index]
                 self.question_label.text = question
                 self.answer_input.opacity = 1
                 self.answer_input.disabled = False
                 self.check_btn.opacity = 1
                 self.check_btn.disabled = False
 
-        else:
-            finish_label = MDLabel(text="Тест завершён!", halign="center", font_style="H5")
-            finish_btn = MDRaisedButton(
-                text="Посмотреть результаты",
-                on_press=self.finish_test,
-                pos_hint={"center_x": 0.5}
-            )
-            layout.add_widget(finish_label)
-            layout.add_widget(finish_btn)
-            self.add_widget(layout)
 
     def submit_answer(self, instance):
         user_answer = self.answer_input.text.strip()
