@@ -273,9 +273,9 @@ class TestScreen(Screen):
                     difficulty = "medium"
         elif category == 'логика':
             numbers = [int(s) for s in task.split('=')[:-1] if s.strip().isdigit()]
-            if any(n >= 100 for n in numbers):
+            if any(n >= 1000 for n in numbers):
                 difficulty = "hard"
-            elif any(10 <= n < 100 for n in numbers):
+            elif any(100 <= n < 1000 for n in numbers):
                 difficulty = "medium"
             else:
                 difficulty = "easy"
