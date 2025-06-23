@@ -104,6 +104,6 @@ buildozer.build_logfile = buildozer.log
 android.add_assets = files
 
 # Ориентация экрана (portrait или landscape)
-orientation = landscape
+orientation = portrait
 
 #p4a.bootstrap = sdl2

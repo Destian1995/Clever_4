@@ -262,15 +262,49 @@ class TestScreen(Screen):
 
         is_correct = False
 
-        # Определяем сложность
+        # Определяем уровень сложности
         difficulty = "easy"
+
         if category == 'счет в уме':
-            if '*' in task:
+            if '+' in task or '-' in task:
+                # Простые операции: всегда easy
+                difficulty = "easy"
+
+            elif '*' in task:
                 parts = task.split('*')
-                if any(len(part.strip()) > 2 for part in parts):
+                a_str, b_str = parts[0].strip(), parts[1].strip()
+                a_len = len(a_str)
+                b_len = len(b_str)
+
+                if a_len >= 3 or b_len >= 3:
                     difficulty = "hard"
-                else:
+                elif a_len == 2 or b_len == 2:
                     difficulty = "medium"
+                else:
+                    difficulty = "easy"
+
+            elif '/' in task:
+                parts = task.split('/')
+                a_str, b_str = parts[0].strip(), parts[1].strip()
+                a_len = len(a_str)
+                b_len = len(b_str)
+
+                if a_len >= 3 or b_len >= 3:
+                    difficulty = "hard"
+                elif a_len == 2 or b_len == 2:
+                    difficulty = "medium"
+                else:
+                    difficulty = "easy"
+
+            elif '√' in task:
+                number_str = task.replace('√', '').strip()
+                if len(number_str) >= 4:
+                    difficulty = "hard"
+                elif len(number_str) == 3:
+                    difficulty = "medium"
+                else:
+                    difficulty = "easy"
+
         elif category == 'логика':
             numbers = [int(s) for s in task.split('=')[:-1] if s.strip().isdigit()]
             if any(n >= 1000 for n in numbers):
@@ -279,6 +313,22 @@ class TestScreen(Screen):
                 difficulty = "medium"
             else:
                 difficulty = "easy"
+
+        elif category == 'внимание':
+            difficulty = "easy"
+
+        elif category == 'обработка информации':
+            # Чем больше символов и сложнее условие — тем выше сложность
+            if '?' in task and task.count('?') >= 5:
+                difficulty = "hard"
+            elif '?' in task:
+                difficulty = "medium"
+            else:
+                difficulty = "easy"
+
+        elif category == 'память':
+            difficulty = "medium"
+
 
         # Проверка ответа
         if category == 'внимание':

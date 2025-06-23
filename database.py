@@ -1,16 +1,13 @@
 import sqlite3
 from datetime import datetime, timedelta
 
+
 def save_scores(answers_log, iq):
     conn = sqlite3.connect('data/user_progress.db')
     cursor = conn.cursor()
 
-    # Извлекаем текущие значения
-    cursor.execute("SELECT attention_score, logic_score, processing_score, math_score, memory_score FROM progress WHERE id=1")
-    current_scores = list(cursor.fetchone())
-
-    # Подсчёт новых значений (только правильные ответы)
-    new_scores = {
+    # Инициализируем счётчики
+    scores = {
         'внимание': 0,
         'логика': 0,
         'обработка информации': 0,
@@ -18,34 +15,17 @@ def save_scores(answers_log, iq):
         'память': 0
     }
 
+    # Суммируем баллы по категориям
     for entry in answers_log:
         cat = entry['category']
         ok = entry['is_correct']
-        diff = entry['difficulty']
 
         if not ok:
             continue
 
-        if cat == 'внимание':
-            new_scores[cat] = 20
-        elif cat == 'память':
-            new_scores[cat] = 20
-        elif cat == 'обработка информации':
-            new_scores[cat] = 20
-        elif cat == 'логика':
-            if diff == 'hard':
-                new_scores[cat] = 27
-            elif diff == 'medium':
-                new_scores[cat] = 18
-            else:
-                new_scores[cat] = 10
-        elif cat == 'счет в уме':
-            if diff == 'hard':
-                new_scores[cat] = 25
-            elif diff == 'medium':
-                new_scores[cat] = 12
-            else:
-                new_scores[cat] = 6
+        if cat in scores:
+            points = entry.get('points', 0)  # Берём баллы из лога
+            scores[cat] += points
 
     # Обновляем БД
     cursor.execute('''
@@ -59,11 +39,11 @@ def save_scores(answers_log, iq):
             last_test_date = date("now")
         WHERE id=1
     ''', (
-        new_scores['внимание'],
-        new_scores['логика'],
-        new_scores['обработка информации'],
-        new_scores['счет в уме'],
-        new_scores['память'],
+        scores['внимание'],
+        scores['логика'],
+        scores['обработка информации'],
+        scores['счет в уме'],
+        scores['память'],
         iq
     ))
 
