@@ -69,12 +69,32 @@ def save_scores(scores, iq):
             last_test_date = date("now")
         WHERE id=1
     ''', (
-        scores['attention'],
-        scores['logic'],
-        scores['processing'],
-        scores['math'],
-        scores['memory'],
+        scores['внимание'],
+        scores['логика'],
+        scores['обработка информации'],
+        scores['счет в уме'],
+        scores['память'],
         iq
     ))
     conn.commit()
     conn.close()
+
+def get_progress():
+    conn = sqlite3.connect('data/user_progress.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM progress WHERE id=1')
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        return {
+            'id': row[0],
+            'last_test_date': row[1],
+            'attention_score': row[2],
+            'logic_score': row[3],
+            'processing_score': row[4],
+            'math_score': row[5],
+            'memory_score': row[6],
+            'iq_score': row[7]
+        }
+    return None

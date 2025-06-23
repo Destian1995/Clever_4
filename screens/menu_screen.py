@@ -1,12 +1,15 @@
 from kivy.uix.screenmanager import Screen
 from kivy.lang import Builder
-from kivy.graphics import Rectangle, Color
+from kivy.graphics import Rectangle, Color, Line
 from kivy.core.image import Image as CoreImage
 from kivymd.uix.button import MDRaisedButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.image import Image
 from kivy.clock import Clock
+from kivy.core.text.markup import MarkupLabel
+from kivy.graphics import Rectangle, Color
+
 
 KV = '''
 <StyledButton@MDRaisedButton>:
@@ -33,38 +36,53 @@ class MenuScreen(Screen):
         self.rect.size = self.size
 
     def create_ui(self, dt):
+        # Основной макет
         layout = MDBoxLayout(
             orientation="vertical",
-            padding="40dp",
-            spacing="20dp",
-            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            spacing="30dp",
+            padding="20dp",
             size_hint=(None, None),
-            width=300
+            width=300,
+            height=400,
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
         )
-        layout.bind(minimum_height=layout.setter('height'))
+        layout.md_bg_color = [0, 0, 0, 0]
 
-        title = MDLabel(
-            text="🧠 Clever 4",
+        # Заголовок с белым текстом и чёрной обводкой (через кастомную отрисовку)
+        self.title = MDLabel(
+            text="Клевер_4",
             halign="center",
-            font_style="H4",
-            theme_text_color="Primary"
+            font_style="H3",
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1),  # Белый цвет текста
+            bold=True,
+            font_size="48sp"
         )
 
+        # Кнопки
         start_btn = MDRaisedButton(
             text="Начать тест",
             on_press=self.start_test,
-            size_hint_x=1,
-            elevation=8
+            size_hint=(1, None),
+            height="60dp",
+            font_size="20sp",
+            md_bg_color=[0.2, 0.8, 0.4, 1],
+            elevation=10,
+            pos_hint={"center_x": 0.5}
         )
 
         stats_btn = MDRaisedButton(
             text="Статистика",
             on_press=self.show_stats,
-            size_hint_x=1,
-            elevation=4
+            size_hint=(1, None),
+            height="60dp",
+            font_size="20sp",
+            md_bg_color=[0.1, 0.6, 0.8, 1],
+            elevation=6,
+            pos_hint={"center_x": 0.5}
         )
 
-        layout.add_widget(title)
+        layout.add_widget(self.title)
         layout.add_widget(start_btn)
         layout.add_widget(stats_btn)
         self.add_widget(layout)
