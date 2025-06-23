@@ -13,7 +13,7 @@ def calculate_iq(answers_log):
 
         # Баллы за задание в зависимости от категории и сложности
         if cat == 'внимание':
-            points = 10
+            points = 8
         elif cat == 'память':
             points = 10 if diff == 'hard' else 7 if diff == 'medium' else 5
         elif cat == 'обработка информации':
@@ -25,13 +25,12 @@ def calculate_iq(answers_log):
         else:
             points = 6  # По умолчанию
 
-        entry['points'] = points  # <-- Записываем баллы в лог
-
-        max_points += points
+        entry['points'] = points
+        max_points = 55
 
         if ok:
             total_points += points
 
     percentage = total_points / max_points if max_points > 0 else 0
-    iq = 80 + percentage * 70  # От 80 до 150
+    iq = 80 + (percentage * 70)  # От 80 до 150
     return round(iq, 2)
