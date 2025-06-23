@@ -49,7 +49,7 @@ requirements = python3==3.11.0, kivy==2.1.0, kivymd==1.2.0, pyjnius==1.5.0, cyth
 
 # Ядро Python-for-Android:
 p4a.python_version = 3.11.0
-p4a.whitelist = python3.11.0
+p4a.whitelist = python3.11.0б, kivymd
 
 # ---------------------------------
 # Параметры Android
@@ -85,10 +85,8 @@ log_level = 0
 # Release-подпись
 # ---------------------------------
 
-# Включаем режим «release» и указываем keystore для автоподписи
-# Формат: <keystore-файл>|<alias>|<пароль keystore>|<пароль ключа>
+# Включаем режим «release»
 android.release = True
-#android.release_signature = /home/vagrant/Clever_4/signkey.keystore|lerdon-release|mypassword|mypassword
 
 # Если вы хотите явно задать, что артефакт — только .apk (не AAB), указываем:
 android.release_artifact = apk
@@ -105,5 +103,3 @@ android.add_assets = files
 
 # Ориентация экрана (portrait или landscape)
 orientation = portrait
-
-#p4a.bootstrap = sdl2
