@@ -55,7 +55,7 @@ def check_and_reset_weekly():
     if datetime.now() - last_date > timedelta(days=7):
         reset_all_scores()
 
-def save_scores(scores):
+def save_scores(scores, iq):
     conn = sqlite3.connect('data/user_progress.db')
     cursor = conn.cursor()
     cursor.execute('''
@@ -65,6 +65,7 @@ def save_scores(scores):
             processing_score = ?,
             math_score = ?,
             memory_score = ?,
+            iq_score = ?,
             last_test_date = date("now")
         WHERE id=1
     ''', (
@@ -72,7 +73,8 @@ def save_scores(scores):
         scores['logic'],
         scores['processing'],
         scores['math'],
-        scores['memory']
+        scores['memory'],
+        iq
     ))
     conn.commit()
     conn.close()

@@ -1,18 +1,76 @@
 from kivy.uix.screenmanager import Screen
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.boxlayout import BoxLayout
+from kivy.lang import Builder
+from kivy.graphics import Rectangle, Color
+from kivy.core.image import Image as CoreImage
+from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.label import MDLabel
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.uix.image import Image
+from kivy.clock import Clock
+
+KV = '''
+<StyledButton@MDRaisedButton>:
+    font_size: "18sp"
+    pos_hint: {"center_x": 0.5}
+    md_bg_color: app.theme_cls.primary_light
+'''
+
+Builder.load_string(KV)
+
 
 class MenuScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        layout = BoxLayout(orientation='vertical')
-        title = Label(text="🧠 Clever 4", font_size=32)
-        start_btn = Button(text="Начать тест")
-        start_btn.bind(on_press=self.start_test)
+        self.bg_texture = CoreImage("files/menu.png").texture
+        self.bind(size=self._update_rect, pos=self._update_rect)
+        with self.canvas.before:
+            self.rect = Rectangle(texture=self.bg_texture, size=self.size, pos=self.pos)
+
+        Clock.schedule_once(self.create_ui, 0.1)
+
+    def _update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+    def create_ui(self, dt):
+        layout = MDBoxLayout(
+            orientation="vertical",
+            padding="40dp",
+            spacing="20dp",
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(None, None),
+            width=300
+        )
+        layout.bind(minimum_height=layout.setter('height'))
+
+        title = MDLabel(
+            text="🧠 Clever 4",
+            halign="center",
+            font_style="H4",
+            theme_text_color="Primary"
+        )
+
+        start_btn = MDRaisedButton(
+            text="Начать тест",
+            on_press=self.start_test,
+            size_hint_x=1,
+            elevation=8
+        )
+
+        stats_btn = MDRaisedButton(
+            text="Статистика",
+            on_press=self.show_stats,
+            size_hint_x=1,
+            elevation=4
+        )
+
         layout.add_widget(title)
         layout.add_widget(start_btn)
+        layout.add_widget(stats_btn)
         self.add_widget(layout)
 
     def start_test(self, instance):
         self.manager.current = 'test'
+
+    def show_stats(self, instance):
+        self.manager.current = 'result'
