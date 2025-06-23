@@ -1,17 +1,7 @@
-from kivy.core.window import Window
-# Устанавливаем размер окна по умолчанию (для тестирования на ПК)
-Window.size = (360, 640)
-
-from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager
-from kivy.lang import Builder
 
 # Подключаем KivyMD
 from kivymd.app import MDApp
-from kivymd.uix.button import MDRaisedButton
-from kivymd.uix.label import MDLabel
-from kivymd.uix.boxlayout import MDBoxLayout
-
 # Твои модули
 from database import *
 from screens.menu_screen import MenuScreen
