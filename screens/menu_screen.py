@@ -52,7 +52,7 @@ class MenuScreen(Screen):
         layout.md_bg_color = [0, 0, 0, 0.2]
 
         self.title = MDLabel(
-            text="Клевер_4",
+            text="Clever_4",
             halign="center",
             font_style="H3",
             theme_text_color="Custom",
