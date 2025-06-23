@@ -3,12 +3,17 @@ from kivy.lang import Builder
 from kivy.clock import Clock
 
 # KivyMD импорты
-from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
-
+from kivy.uix.widget import Widget
+from kivy.properties import NumericProperty
+from kivy.clock import Clock
+from kivy.graphics import Color, Ellipse, Line, PushMatrix, PopMatrix, Scale, Translate
+from kivymd.uix.label import MDLabel
+from kivy.animation import Animation
+import math
 # Задачи
 from tasks.attention import generate_attention_task, check_attention_answer
 from tasks.logic import generate_logic_task, check_logic_answer
@@ -27,6 +32,78 @@ KV = '''
 '''
 
 Builder.load_string(KV)
+
+class CircularCountdown(Widget):
+    value = NumericProperty(0)
+
+    def __init__(self, total_time=4, **kwargs):
+        super().__init__(**kwargs)
+        self.total_time = total_time
+        self.value = 0
+        self.elapsed_time = 0
+        self.alpha = 1  # прозрачность кольца
+
+        # Центральная метка
+        self.text_label = MDLabel(
+            text=str(total_time),
+            halign="center",
+            valign="middle",
+            font_style="H4",
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1),
+            size_hint=(None, None),
+            size=("100dp", "100dp"),
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
+        )
+        self.add_widget(self.text_label)
+
+        # Пульсация текста
+        Clock.schedule_interval(self.animate_pulse, 1 / 60)
+
+    def on_value(self, *args):
+        remaining = max(0, round(self.total_time - self.value, 1))
+        self.text_label.text = str(remaining)
+
+    def animate_pulse(self, dt):
+        scale = 1.0 + 0.08 * math.sin(self.elapsed_time * 4)
+        self.text_label.font_size = f"{scale * 48}sp"
+        self.elapsed_time += dt
+
+    def draw(self):
+        self.canvas.before.clear()
+        with self.canvas.before:
+            PushMatrix()
+            width = min(self.width, self.height) / 2
+            line_width = 12
+            cx, cy = self.center
+            progress = 1 - (self.value / self.total_time)
+            angle = 360 * progress
+
+            # Технологичный цвет: неоново-синий с затуханием
+            Color(0.2, 0.7, 1, self.alpha)  # RGBA
+
+            Line(circle=(cx, cy, width - line_width, 90, 90 + angle), width=line_width, cap='round')
+
+            PopMatrix()
+
+    def update(self, dt):
+        self.value += dt
+        if self.value >= self.total_time:
+            self.value = self.total_time
+            self.draw()
+            self.fade_out()
+            return False
+        self.draw()
+
+    def fade_out(self):
+        """Плавное исчезновение кольца после завершения"""
+        anim = Animation(alpha=0, duration=0.5)
+        anim.bind(on_progress=lambda *_: self.draw())
+        anim.start(self)
+
+    def stop(self):
+        Clock.unschedule(self.update)
+        self.parent.remove_widget(self)
 
 class TestScreen(Screen):
     def __init__(self, **kwargs):
@@ -59,12 +136,27 @@ class TestScreen(Screen):
             category, sequence, question, answer = self.tasks[self.current_index]
             self.correct_answers.append(answer)
 
-            # Создаем виджеты и сохраняем их как атрибуты
+            # Создаем виджеты
             self.task_label = MDLabel(
                 text=sequence,
                 halign="center",
                 font_style="H6"
             )
+
+            # Круговой таймер
+            self.countdown_label = MDLabel(
+                text="",
+                halign="center",
+                font_style="H6",
+                opacity=0
+            )
+
+            self.circular_timer = None
+            if category not in ['логика', 'счет в уме']:
+                self.circular_timer = CircularCountdown(total_time=4)
+                self.circular_timer.size_hint = (None, None)
+                self.circular_timer.size = ("200dp", "200dp")
+                self.circular_timer.pos_hint = {"center_x": 0.5}
 
             self.question_label = MDLabel(
                 text="",
@@ -79,7 +171,7 @@ class TestScreen(Screen):
                 disabled=True
             )
 
-            self.check_btn = MDRaisedButton(  # ← Теперь это self.check_btn
+            self.check_btn = MDRaisedButton(
                 text="Проверить",
                 on_press=self.submit_answer,
                 pos_hint={"center_x": 0.5},
@@ -87,20 +179,24 @@ class TestScreen(Screen):
                 disabled=True
             )
 
+            # Добавляем виджеты
             layout.add_widget(self.task_label)
+
+            if self.circular_timer:
+                layout.add_widget(self.circular_timer)
+                Clock.schedule_interval(self.circular_timer.update, 0.05)
+
             layout.add_widget(self.question_label)
             layout.add_widget(self.answer_input)
             layout.add_widget(self.check_btn)
             self.add_widget(layout)
 
-            # Устанавливаем таймер на исчезновение последовательности
+            # Таймер на скрытие последовательности
             if category not in ['логика', 'счет в уме']:
                 Clock.schedule_once(lambda dt: self.hide_sequence(category), 4)
             else:
-                # Для логики и счета сразу показываем кнопки И вопрос
                 _, task, question, answer = self.tasks[self.current_index]
-                self.question_label.text = question  # ← Показываем вопрос сразу!
-
+                self.question_label.text = question
                 self.answer_input.opacity = 1
                 self.answer_input.disabled = False
                 self.check_btn.opacity = 1
@@ -175,16 +271,18 @@ class TestScreen(Screen):
         })
         self.user_answers.append(user_answer)
         self.current_index += 1
+
     def hide_sequence(self, category):
-        # Если это НЕ "логика" и НЕ "счет в уме", скрываем последовательность
         if category not in ['логика', 'счет в уме']:
             self.task_label.text = ""
 
-        # Получаем данные текущего задания
         _, task, question, answer = self.tasks[self.current_index]
-
-        # Показываем вопрос (всегда)
         self.question_label.text = question
+
+        # Скрываем таймер, если он был
+        if hasattr(self, 'circular_timer') and self.circular_timer:
+            self.circular_timer.stop()
+            self.circular_timer = None
 
         # Активируем ввод
         self.answer_input.opacity = 1

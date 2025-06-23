@@ -16,7 +16,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from database import *
 from screens.menu_screen import MenuScreen
 from screens.test_screen import TestScreen
-from screens.result_screen import ResultScreen
+from screens.result_screen import StatsScreen
 
 
 class CleverApp(MDApp):  # Наследуемся от MDApp
@@ -27,7 +27,7 @@ class CleverApp(MDApp):  # Наследуемся от MDApp
         sm = ScreenManager()
         sm.add_widget(MenuScreen(name='menu'))
         sm.add_widget(TestScreen(name='test'))
-        sm.add_widget(ResultScreen(name='result'))
+        sm.add_widget(StatsScreen(name='result'))
 
         # Применяем стиль Material Design
         self.theme_cls.primary_palette = "Teal"  # Цветовая тема
