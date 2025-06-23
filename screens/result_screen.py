@@ -1,3 +1,4 @@
+from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.uix.screenmanager import Screen
 from kivy.lang import Builder
@@ -57,8 +58,9 @@ class StatsScreen(Screen):
         self.rect.size = self.size
 
     def build_ui(self, dt=None):
-        self.clear_widgets()  # очистим экран, если уже есть виджеты
+        self.clear_widgets()
 
+        # Основной контейнер
         layout = MDBoxLayout(orientation='vertical', padding=dp(10), spacing=dp(10))
 
         # Заголовок экрана
@@ -75,7 +77,30 @@ class StatsScreen(Screen):
 
         progress = get_progress()
 
+        # === Блок с IQ — выносим отдельно и поднимаем вверх ===
+        iq_container = MDBoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=dp(100),
+            padding=[0, dp(10), 0, dp(10)]
+        )
+
         if progress:
+            iq_value = progress.get("iq_score", 0)
+            self.iq_label = MDLabel(
+                text=f"IQ: {iq_value}",
+                font_style="H2",
+                theme_text_color="Custom",
+                text_color=(1, 0.85, 0.2, 1),
+                halign="center",
+                valign="middle",
+                font_size="48sp",
+                bold=True
+            )
+            self.iq_label.bind(size=self.iq_label.setter('text_size'))
+            iq_container.add_widget(self.iq_label)
+            layout.add_widget(iq_container)
+
             categories = {
                 'attention_score': 'Внимание',
                 'logic_score': 'Логика',
@@ -84,33 +109,17 @@ class StatsScreen(Screen):
                 'memory_score': 'Память',
             }
 
-            # Карточка занимает почти весь экран по высоте
+            # Карточка с таблицей статистики
             card = MDCard(
                 padding=dp(20),
                 size_hint=(1, None),
-                height=Window.height * 0.75,
+                height=Window.height * 0.5,
                 elevation=10,
                 md_bg_color=[0.1, 0.1, 0.1, 0.9],
                 radius=[20],
                 orientation='vertical'
             )
 
-            # Большой IQ заголовок сверху по центру
-            iq_value = progress.get("iq_score", 0)
-            iq_label = MDLabel(
-                text=f"IQ: {iq_value}",
-                font_style="H2",
-                theme_text_color="Custom",
-                text_color=(1, 0.85, 0.2, 1),
-                size_hint_y=None,
-                height=dp(70),
-                halign="center",
-                valign="middle",
-            )
-            iq_label.bind(size=iq_label.setter('text_size'))  # для правильного выравнивания
-            card.add_widget(iq_label)
-
-            # Таблица: категории слева, значения справа
             table = MDBoxLayout(orientation='vertical', spacing=dp(8))
             for key, name in categories.items():
                 row = MDBoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
@@ -139,11 +148,9 @@ class StatsScreen(Screen):
 
                 row.add_widget(label)
                 row.add_widget(score)
-
                 table.add_widget(row)
 
             card.add_widget(table)
-
             layout.add_widget(card)
 
         else:
@@ -156,17 +163,24 @@ class StatsScreen(Screen):
             )
             layout.add_widget(no_data)
 
-        # Кнопка "Пройти тест снова"
-        restart_btn = MDRaisedButton(
+        # === Кнопка "Пройти тест снова" — делаем её больше и добавляем плавное мигание ===
+        self.restart_btn = MDRaisedButton(
             text="Пройти тест снова",
             on_press=self.restart_test,
             pos_hint={"center_x": 0.5},
-            md_bg_color=[1, 1, 1, 1],     # Белый фон кнопки
-            text_color=(0, 0, 0, 1),      # Черный текст
-            elevation=8
+            size_hint=(0.8, None),
+            height=dp(70),
+            md_bg_color=[1, 1, 1, 1],  # Белый фон кнопки
+            text_color=(0, 0, 0, 1),  # Черный текст
+            elevation=10,
+            font_size="20sp"
         )
-        layout.add_widget(restart_btn)
-        # Кнопка назад внизу по центру
+        layout.add_widget(self.restart_btn)
+
+        # Запуск плавной анимации
+        Clock.schedule_once(self.start_blinking, 0.5)
+
+        # Кнопка назад
         back_btn = MDRaisedButton(
             text="Назад",
             on_press=self.go_back,
@@ -180,6 +194,17 @@ class StatsScreen(Screen):
         layout.add_widget(back_btn)
 
         self.add_widget(layout)
+
+    def start_blinking(self, dt):
+        """Запуск бесконечной анимации плавного мигания"""
+        if not hasattr(self, 'restart_btn'):
+            return
+
+        # Анимация уменьшения прозрачности
+        anim = Animation(md_bg_color=[1, 1, 1, 0.4], duration=0.8) + \
+               Animation(md_bg_color=[1, 1, 1, 1], duration=0.8)
+        anim.repeat = True
+        anim.start(self.restart_btn)
 
     def restart_test(self, instance):
         self.manager.get_screen('test').restart_test()
