@@ -1,6 +1,75 @@
 import sqlite3
 from datetime import datetime, timedelta
 
+def save_scores(answers_log, iq):
+    conn = sqlite3.connect('data/user_progress.db')
+    cursor = conn.cursor()
+
+    # Извлекаем текущие значения
+    cursor.execute("SELECT attention_score, logic_score, processing_score, math_score, memory_score FROM progress WHERE id=1")
+    current_scores = list(cursor.fetchone())
+
+    # Подсчёт новых значений (только правильные ответы)
+    new_scores = {
+        'внимание': 0,
+        'логика': 0,
+        'обработка информации': 0,
+        'счет в уме': 0,
+        'память': 0
+    }
+
+    for entry in answers_log:
+        cat = entry['category']
+        ok = entry['is_correct']
+        diff = entry['difficulty']
+
+        if not ok:
+            continue
+
+        if cat == 'внимание':
+            new_scores[cat] = 20
+        elif cat == 'память':
+            new_scores[cat] = 20
+        elif cat == 'обработка информации':
+            new_scores[cat] = 20
+        elif cat == 'логика':
+            if diff == 'hard':
+                new_scores[cat] = 27
+            elif diff == 'medium':
+                new_scores[cat] = 18
+            else:
+                new_scores[cat] = 10
+        elif cat == 'счет в уме':
+            if diff == 'hard':
+                new_scores[cat] = 25
+            elif diff == 'medium':
+                new_scores[cat] = 12
+            else:
+                new_scores[cat] = 6
+
+    # Обновляем БД
+    cursor.execute('''
+        UPDATE progress SET
+            attention_score = ?,
+            logic_score = ?,
+            processing_score = ?,
+            math_score = ?,
+            memory_score = ?,
+            iq_score = ?,
+            last_test_date = date("now")
+        WHERE id=1
+    ''', (
+        new_scores['внимание'],
+        new_scores['логика'],
+        new_scores['обработка информации'],
+        new_scores['счет в уме'],
+        new_scores['память'],
+        iq
+    ))
+
+    conn.commit()
+    conn.close()
+
 def init_db():
     conn = sqlite3.connect('data/user_progress.db')
     cursor = conn.cursor()
@@ -54,30 +123,6 @@ def check_and_reset_weekly():
     last_date = get_last_test_date()
     if datetime.now() - last_date > timedelta(days=7):
         reset_all_scores()
-
-def save_scores(scores, iq):
-    conn = sqlite3.connect('data/user_progress.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        UPDATE progress SET
-            attention_score = ?,
-            logic_score = ?,
-            processing_score = ?,
-            math_score = ?,
-            memory_score = ?,
-            iq_score = ?,
-            last_test_date = date("now")
-        WHERE id=1
-    ''', (
-        scores['внимание'],
-        scores['логика'],
-        scores['обработка информации'],
-        scores['счет в уме'],
-        scores['память'],
-        iq
-    ))
-    conn.commit()
-    conn.close()
 
 def get_progress():
     conn = sqlite3.connect('data/user_progress.db')

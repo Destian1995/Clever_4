@@ -31,7 +31,7 @@ def generate_attention_task():
     random.shuffle(full_list)
 
     task = "Какое слово лишнее? " + ", ".join(full_list)
-    return task, "Какое слово лишнее? ", extra_word
+    return task, "Введите ответ ", extra_word
 
 def check_attention_answer(user_answer, correct_answer):
     return user_answer.strip().lower() == correct_answer.strip().lower()

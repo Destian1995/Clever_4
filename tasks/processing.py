@@ -22,7 +22,7 @@ def generate_processing_task():
     correct_answer = str(max(a, b))
 
     task = f"Какое число больше: {a} или {b}?"
-    return task, "Какое число больше?", correct_answer
+    return task, "Введите ответ", correct_answer
 
 
 def check_processing_answer(user_answer, correct_answer):

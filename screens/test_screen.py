@@ -35,13 +35,7 @@ class TestScreen(Screen):
         self.current_index = 0
         self.user_answers = []
         self.correct_answers = []
-        self.scores = {
-            'внимание': 0,
-            'логика': 0,
-            'обработка информации': 0,
-            'счет в уме': 0,
-            'память': 0
-        }
+        self.answers_log = []
 
     def on_enter(self):
         """Вызывается при входе на экран"""
@@ -125,40 +119,62 @@ class TestScreen(Screen):
 
     def submit_answer(self, instance):
         user_answer = self.answer_input.text.strip()
-        correct_answer = self.correct_answers[self.current_index]
 
-        if user_answer:
-            # Правильно распаковываем все 4 значения
-            category, task, question, answer = self.tasks[self.current_index]
+        # Получаем текущую задачу
+        category, task, question, answer = self.tasks[self.current_index]
 
-            is_correct = False
-            if category == 'внимание':
-                is_correct = check_attention_answer(user_answer, correct_answer)
-            elif category == 'логика':
-                is_correct = check_logic_answer(user_answer, correct_answer)
-            elif category == 'обработка информации':
-                is_correct = check_processing_answer(user_answer, correct_answer)
-            elif category == 'счет в уме':
-                is_correct = check_math_answer(user_answer, correct_answer)
-            elif category == 'память':
-                is_correct = check_memory_answer(user_answer, correct_answer)
+        is_correct = False
 
-            dialog = MDDialog(
-                title="Результат",
-                text="Верно!" if is_correct else f"Неверно. Правильный ответ: {correct_answer}",
-                buttons=[
-                    MDFlatButton(
-                        text="OK",
-                        on_press=lambda x: (dialog.dismiss(), self.next_task())
-                    )
-                ]
-            )
-            dialog.open()
+        # Определяем сложность
+        difficulty = "easy"
+        if category == 'счет в уме':
+            if '*' in task:
+                parts = task.split('*')
+                if any(len(part.strip()) > 2 for part in parts):
+                    difficulty = "hard"
+                else:
+                    difficulty = "medium"
+        elif category == 'логика':
+            numbers = [int(s) for s in task.split('=')[:-1] if s.strip().isdigit()]
+            if any(n >= 100 for n in numbers):
+                difficulty = "hard"
+            elif any(10 <= n < 100 for n in numbers):
+                difficulty = "medium"
+            else:
+                difficulty = "easy"
 
-            self.scores[category] = 20 if is_correct else 0
-            self.user_answers.append(user_answer)
-            self.current_index += 1
+        # Проверка ответа
+        if category == 'внимание':
+            is_correct = check_attention_answer(user_answer, answer)
+        elif category == 'логика':
+            is_correct = check_logic_answer(user_answer, answer)
+        elif category == 'обработка информации':
+            is_correct = check_processing_answer(user_answer, answer)
+        elif category == 'счет в уме':
+            is_correct = check_math_answer(user_answer, answer)
+        elif category == 'память':
+            is_correct = check_memory_answer(user_answer, answer)
 
+        dialog = MDDialog(
+            title="Результат",
+            text="Верно!" if is_correct else f"Неверно. Правильный ответ: {answer}",
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    on_press=lambda x: (dialog.dismiss(), self.next_task())
+                )
+            ]
+        )
+        dialog.open()
+
+        # Сохраняем результат с категорией и сложностью
+        self.answers_log.append({
+            'category': category,
+            'is_correct': is_correct,
+            'difficulty': difficulty
+        })
+        self.user_answers.append(user_answer)
+        self.current_index += 1
     def hide_sequence(self, category):
         # Если это НЕ "логика" и НЕ "счет в уме", скрываем последовательность
         if category not in ['логика', 'счет в уме']:
@@ -183,25 +199,16 @@ class TestScreen(Screen):
 
     def finish_test(self, instance=None):
         """Завершение теста и переход к результатам"""
-        # Рассчитываем IQ на основе набранных баллов
-        iq = calculate_iq(self.scores)
-        # Сохраняем результаты + IQ
-        save_scores(self.scores, iq)
-
-        # Переход к экрану результатов
+        iq = calculate_iq(self.answers_log)
+        save_scores(self.answers_log, iq)
         self.manager.current = 'result'
 
     def restart_test(self):
-        """Сбрасывает индекс и счётчики для повторного прохождения"""
+        """Полностью сбрасывает все данные и начинает тест заново"""
         self.current_index = 0
-        self.correct_answers.clear()
+        self.tasks = []  # ← Старые задачи очищаются
         self.user_answers.clear()
-        self.scores = {
-            'внимание': 0,
-            'логика': 0,
-            'обработка информации': 0,
-            'счет в уме': 0,
-            'память': 0
-        }
-        self.generate_tasks()
+        self.generate_tasks()  # ← Генерируем новые задачи
         self.show_current_task()
+        self.answers_log.clear()  # ← Очистка ЛОГА ответов
+
