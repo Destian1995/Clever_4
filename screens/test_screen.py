@@ -184,7 +184,7 @@ class TestScreen(Screen):
 
             if self.circular_timer:
                 layout.add_widget(self.circular_timer)
-                Clock.schedule_interval(self.circular_timer.update, 0.05)
+                Clock.schedule_interval(self.circular_timer.update, 1 / 60)
 
             layout.add_widget(self.question_label)
             layout.add_widget(self.answer_input)
