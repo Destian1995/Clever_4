@@ -7,7 +7,7 @@ def generate_memory_task():
     - question: текст вопроса
     - correct_answer: правильный ответ
     """
-    symbols = [str(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) for _ in range(5)]
+    symbols = [str(random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")) for _ in range(7)]
     position = random.randint(1, len(symbols))
 
     sequence = " ".join(symbols)

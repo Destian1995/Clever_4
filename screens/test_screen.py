@@ -1,3 +1,4 @@
+from kivy.uix.label import Label
 from kivy.uix.screenmanager import Screen
 from kivy.lang import Builder
 from kivy.clock import Clock
@@ -7,12 +8,15 @@ from kivymd.uix.button import MDRaisedButton, MDFlatButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
-from kivy.uix.widget import Widget
-from kivy.properties import NumericProperty
 from kivy.clock import Clock
 from kivy.graphics import Color, Ellipse, Line, PushMatrix, PopMatrix, Scale, Translate
 from kivymd.uix.label import MDLabel
 from kivy.animation import Animation
+from kivy.uix.label import Label
+from kivy.graphics import Color, Rectangle
+from kivy.core.text import Label as CoreLabel
+from kivy.uix.widget import Widget
+from kivy.properties import StringProperty, NumericProperty, ListProperty
 import math
 # Задачи
 from tasks.attention import generate_attention_task, check_attention_answer
@@ -104,6 +108,43 @@ class CircularCountdown(Widget):
     def stop(self):
         Clock.unschedule(self.update)
         self.parent.remove_widget(self)
+
+class OutlinedLabel(Widget):
+    text = StringProperty("")
+    font_size = NumericProperty(24)
+    color = ListProperty([1, 1, 1, 1])  # Цвет текста
+    outline_color = ListProperty([0, 0, 0, 1])  # Цвет обводки
+    outline_width = NumericProperty(2)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.bind(pos=self.update_canvas,
+                  size=self.update_canvas,
+                  text=self.update_canvas,
+                  font_size=self.update_canvas)
+
+    def update_canvas(self, *args):
+        self.canvas.clear()
+        if not self.text:
+            return
+
+        core_label = CoreLabel(text=self.text, font_size=self.font_size)
+        core_label.refresh()
+        texture = core_label.texture
+        tex_w, tex_h = texture.size
+
+        x = self.center_x - tex_w / 2
+        y = self.center_y - tex_h / 2
+
+        with self.canvas:
+            # Обводка — 8 направлений
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]:
+                Color(*self.outline_color)
+                Rectangle(texture=texture, pos=(x + dx * self.outline_width, y + dy * self.outline_width), size=texture.size)
+
+            # Основной текст
+            Color(*self.color)
+            Rectangle(texture=texture, pos=(x, y), size=texture.size)
 
 class TestScreen(Screen):
     def __init__(self, **kwargs):
@@ -251,9 +292,21 @@ class TestScreen(Screen):
         elif category == 'память':
             is_correct = check_memory_answer(user_answer, answer)
 
+        result_text = (
+            "[b][color=#00FF00]Верно![/color][/b]"
+            if is_correct
+            else f"[color=#FF0000]Неверно.[/color]\n[color=#FFD700]Правильный ответ: {answer}[/color]"
+        )
+
         dialog = MDDialog(
             title="Результат",
-            text="Верно!" if is_correct else f"Неверно. Правильный ответ: {answer}",
+            type="custom",
+            content_cls=Label(
+                text=result_text,
+                markup=True,
+                font_size="20sp" if is_correct else "16sp",
+                halign="center",
+            ),
             buttons=[
                 MDFlatButton(
                     text="OK",
