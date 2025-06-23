@@ -24,7 +24,7 @@ source.dir = .
 source.include_exts = py,png,jpg,ttf,mp3,mp4,db,sqlite3,json,txt
 
 # Паттерны (шаблоны) для включения файлов в APK
-source.include_patterns = data/*, files/*, user_progress.db, *.py
+source.include_patterns = data/*, files/*, user_progress.db, *.py, *.kv
 
 # Картинка-иконка приложения и presplash
 icon.filename = %(source.dir)s/assets/icon.png
