@@ -247,7 +247,20 @@ class TestScreen(Screen):
                 self.answer_input.disabled = False
                 self.check_btn.opacity = 1
                 self.check_btn.disabled = False
-
+        else:
+            finish_label = MDLabel(
+                text="Тест завершён!",
+                halign="center",
+                font_style="H5"
+            )
+            finish_btn = MDRaisedButton(
+                text="Посмотреть результаты",
+                on_press=self.finish_test,
+                pos_hint={"center_x": 0.5}
+            )
+            layout.add_widget(finish_label)
+            layout.add_widget(finish_btn)
+            self.add_widget(layout)
 
     def submit_answer(self, instance):
         user_answer = self.answer_input.text.strip()
@@ -342,6 +355,7 @@ class TestScreen(Screen):
             if is_correct
             else f"[color=#FF0000]Неверно.[/color]\n[color=#1E3A8A]Правильный ответ: {answer}[/color]"
         )
+
 
         dialog = MDDialog(
             title="Результат",
