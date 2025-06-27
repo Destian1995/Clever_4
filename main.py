@@ -8,7 +8,7 @@ from screens.menu_screen import MenuScreen
 from screens.test_screen import TestScreen
 from screens.result_screen import StatsScreen
 from screens.splash_screen import SplashScreen
-
+from screens.difficulty_screen import DifficultyScreen
 
 class CleverApp(MDApp):  # Наследуемся от MDApp
     def build(self):
@@ -18,6 +18,7 @@ class CleverApp(MDApp):  # Наследуемся от MDApp
         sm = ScreenManager()
         sm.add_widget(SplashScreen(name='splash'))
         sm.add_widget(MenuScreen(name='menu'))
+        sm.add_widget(DifficultyScreen(name='difficulty'))
         sm.add_widget(TestScreen(name='test'))
         sm.add_widget(StatsScreen(name='result'))
 

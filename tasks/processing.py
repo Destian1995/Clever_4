@@ -1,15 +1,19 @@
 import random
 
-def generate_processing_task():
+def generate_processing_task(difficulty="medium"):
     """
     Генерирует два близких случайных числа.
     Пользователь должен выбрать большее.
     """
-    # Базовое число
-    base = random.randint(1000, 99999)
-
-    # Небольшое отклонение (±1% от базового числа)
-    deviation = max(1, int(base * 0.01))  # минимум 1, чтобы гарантировать разницу
+    if difficulty == "easy":
+        base = random.randint(100, 999)  # Меньший диапазон
+        deviation = max(1, int(base * 0.01))  # Минимальное отклонение
+    elif difficulty == "medium":
+        base = random.randint(1000, 99999)  # Средний диапазон
+        deviation = max(1, int(base * 0.05))  # Увеличенное отклонение
+    elif difficulty == "hard":
+        base = random.randint(100000, 9999999)  # Большой диапазон
+        deviation = max(1, int(base * 0.1))  # Значительное отклонение
 
     # Генерируем два близких числа
     a = base
@@ -30,6 +34,6 @@ def check_processing_answer(user_answer, correct_answer):
 
 # Тестирование
 if __name__ == "__main__":
-    task, answer = generate_processing_task()
+    task, question, answer = generate_processing_task(difficulty="hard")
     print("Задание:", task)
     print("Правильный ответ:", answer)

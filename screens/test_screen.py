@@ -149,24 +149,32 @@ class OutlinedLabel(Widget):
 class TestScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.difficulty = "medium"
         self.tasks = []
         self.current_index = 0
         self.user_answers = []
         self.correct_answers = []
         self.answers_log = []
 
+    def set_difficulty(self, difficulty):
+        """Устанавливает уровень сложности для теста"""
+        self.difficulty = difficulty
+        self.on_enter()  # Генерация новых задач с учетом выбранной сложности
+
     def on_enter(self):
         """Вызывается при входе на экран"""
         self.clear_widgets()
-        self.generate_tasks()
-        self.show_current_task()
+        self.reset_test()  # Сбрасываем все данные теста
+        self.generate_tasks()  # Генерируем новые задачи
+        self.show_current_task()  # Показываем первое задание
 
     def generate_tasks(self):
+        """Генерирует задачи с учетом выбранной сложности"""
         self.tasks = [
             ('внимание', ) + generate_attention_task(),
-            ('логика', ) + generate_logic_task(),
-            ('обработка информации', ) + generate_processing_task(),
-            ('счет в уме', ) + generate_math_task(difficulty=2),
+            ('логика', ) + generate_logic_task(difficulty=self.difficulty),
+            ('обработка информации', ) + generate_processing_task(difficulty=self.difficulty),
+            ('счет в уме', ) + generate_math_task(difficulty=self.difficulty),
             ('память', ) + generate_memory_task()
         ]
 
@@ -402,6 +410,14 @@ class TestScreen(Screen):
         self.check_btn.opacity = 1
         self.check_btn.disabled = False
 
+    def reset_test(self):
+        """Полностью сбрасывает все данные теста"""
+        self.current_index = 0  # Сброс индекса текущего задания
+        self.tasks = []  # Очистка старых задач
+        self.user_answers.clear()  # Очистка ответов пользователя
+        self.correct_answers.clear()  # Очистка правильных ответов
+        self.answers_log.clear()  # Очистка лога ответов
+
     def next_task(self):
         """Переход к следующему заданию"""
         self.clear_widgets()
@@ -415,6 +431,7 @@ class TestScreen(Screen):
 
     def restart_test(self):
         """Полностью сбрасывает все данные и начинает тест заново"""
+        self.reset_test()  # Сбрасываем все данные теста
         self.current_index = 0
         self.tasks = []  # ← Старые задачи очищаются
         self.user_answers.clear()
