@@ -22,9 +22,9 @@ class CleverApp(MDApp):  # Наследуемся от MDApp
         sm.add_widget(TestScreen(name='test'))
         sm.add_widget(StatsScreen(name='result'))
 
-        # Применяем стиль Material Design
-        self.theme_cls.primary_palette = "Teal"  # Цветовая тема
-        self.theme_cls.theme_style = "Light"     # Светлая/Тёмная тема
+        # Применяем стиль Material Design — более строгая палитра
+        self.theme_cls.primary_palette = "BlueGray"
+        self.theme_cls.theme_style = "Dark"
         return sm
 
 

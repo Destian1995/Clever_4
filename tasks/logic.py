@@ -1,38 +1,40 @@
 import random
 
 def generate_logic_task(difficulty="medium"):
-    if difficulty == "easy":
-        base = random.randint(1, 30)
-        rule = random.choice([
-            lambda x: x + base,
-            lambda x: x * base
-        ])
-        question_range = (4, 7)
+    # Варианты логических заданий: правило для последовательности, найти лишнее, заполнить пропуск
+    variant = random.choice(['sequence_rule', 'odd_one', 'fill_gap'])
 
-    elif difficulty == "medium":
-        base = random.randint(2, 4)
-        rule = random.choice([
-            lambda x: x ** base if x <= 5 else x * base,
-            lambda x: x * 2 + base
-        ])
-        question_range = (4, 7)
+    if variant == 'sequence_rule':
+        # простая арифметическая последовательность
+        start = random.randint(1, 10)
+        step = random.randint(1, 6)
+        seq = [start + i * step for i in range(6)]
+        question_num = random.randint(4, 6)
+        task = ", ".join(f"{i}" for i in seq[:3]) + ", ..."
+        correct_answer = str(seq[question_num - 1])
+        question_text = f"Какое число стоит на позиции {question_num}?"
+        return task, question_text, correct_answer
 
-    elif difficulty == "hard":
-        base = random.randint(3000, 6000)
-        rule = random.choice([
-            lambda x: (x + base) * 3,
-            lambda x: x * base,
-            lambda x: x * 2 + base
-        ])
-        question_range = (4, 6)
+    elif variant == 'odd_one':
+        # найти лишнее число по правилу
+        base = random.randint(2, 5)
+        seq = [base * i for i in range(1, 6)]
+        odd = random.randint(1, 20)
+        seq[random.randint(0, 4)] = odd
+        task = ", ".join(str(x) for x in seq)
+        correct_answer = str(odd)
+        question_text = "Какое число лишнее?"
+        return task, question_text, correct_answer
 
-    examples = [f"{i} = {rule(i)}" for i in range(1, 4)]
-    question_num = random.randint(*question_range)
-    task = ", ".join(examples)
-    correct_answer = str(rule(question_num))
-    question_text = f"Какое число должно быть на месте {question_num}?"
-
-    return task, question_text, correct_answer
+    else:
+        # fill_gap: показать несколько примеров и просить следующую цифру
+        a = random.randint(1, 10)
+        b = random.randint(1, 5)
+        seq = [a + i * b for i in range(5)]
+        task = ", ".join(str(x) for x in seq[:-1]) + ", ?"
+        correct_answer = str(seq[-1])
+        question_text = "Какое число должно стоять вместо знака ?"
+        return task, question_text, correct_answer
 
 def check_logic_answer(user_answer, correct_answer):
     return user_answer.strip() == correct_answer.strip()

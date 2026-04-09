@@ -48,7 +48,7 @@ class DifficultyScreen(Screen):
             pos_hint={"top": 0.95}
         )
         layout.add_widget(self.title)
-        Clock.schedule_once(lambda dt: self.animate_title("Выберите уровень сложности"), 0.4)
+        Clock.schedule_once(lambda dt: self.animate_title("Начать тест"), 0.4)
 
         btn_layout = MDBoxLayout(
             orientation="vertical",
@@ -59,41 +59,17 @@ class DifficultyScreen(Screen):
         )
         btn_layout.bind(minimum_height=btn_layout.setter('height'))
 
-        def button_animation(instance):
-            anim = Animation(opacity=0.8, duration=0.1) + Animation(opacity=1, duration=0.1)
-            anim.start(instance)
-
-        easy_btn = MDRaisedButton(
-            text="Разминка",
-            on_press=lambda x: [button_animation(x), self.set_difficulty("easy")],
+        start_btn = MDRaisedButton(
+            text="Начать тест",
+            on_press=lambda x: setattr(self.manager, 'current', 'test'),
             size_hint=(1, None),
             height="60dp",
             font_size="20sp",
-            md_bg_color=[0.2, 0.8, 0.2, 1],
-            elevation=12
-        )
-        medium_btn = MDRaisedButton(
-            text="Средний",
-            on_press=lambda x: [button_animation(x), self.set_difficulty("medium")],
-            size_hint=(1, None),
-            height="60dp",
-            font_size="20sp",
-            md_bg_color=[0.8, 0.6, 0.2, 1],
-            elevation=12
-        )
-        hard_btn = MDRaisedButton(
-            text="Высокий",
-            on_press=lambda x: [button_animation(x), self.set_difficulty("hard")],
-            size_hint=(1, None),
-            height="60dp",
-            font_size="20sp",
-            md_bg_color=[0.8, 0.2, 0.2, 1],
+            md_bg_color=[0.2, 0.6, 0.9, 1],
             elevation=12
         )
 
-        for btn in [easy_btn, medium_btn, hard_btn]:
-            btn_layout.add_widget(btn)
-
+        btn_layout.add_widget(start_btn)
         self.add_widget(layout)
         layout.add_widget(btn_layout)
 

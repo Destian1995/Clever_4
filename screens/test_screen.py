@@ -11,6 +11,7 @@ from kivymd.uix.dialog import MDDialog
 from kivy.clock import Clock
 from kivy.graphics import Color, Ellipse, Line, PushMatrix, PopMatrix, Scale, Translate
 from kivymd.uix.label import MDLabel
+from kivymd.uix.progressbar import MDProgressBar
 from kivy.animation import Animation
 from kivy.uix.label import Label
 from kivy.graphics import Color, Rectangle
@@ -24,6 +25,9 @@ from tasks.logic import generate_logic_task, check_logic_answer
 from tasks.processing import generate_processing_task, check_processing_answer
 from tasks.mental_math import generate_task as generate_math_task, check_math_answer
 from tasks.working_memory import generate_memory_task, check_memory_answer
+
+# Адаптивный контроллер
+from utils.adaptive import AdaptiveController
 
 # База данных и IQ
 from database import save_scores
@@ -39,13 +43,13 @@ Builder.load_string(KV)
 
 class CircularCountdown(Widget):
     value = NumericProperty(0)
-
-    def __init__(self, total_time=4, **kwargs):
+    def __init__(self, total_time=4, on_complete=None, **kwargs):
         super().__init__(**kwargs)
         self.total_time = total_time
         self.value = 0
         self.elapsed_time = 0
         self.alpha = 1  # прозрачность кольца
+        self._on_complete = on_complete
 
         # Центральная метка
         self.text_label = MDLabel(
@@ -95,6 +99,12 @@ class CircularCountdown(Widget):
         if self.value >= self.total_time:
             self.value = self.total_time
             self.draw()
+            # Вызовим callback завершения в main loop, если он задан
+            try:
+                if callable(self._on_complete):
+                    Clock.schedule_once(lambda dt: self._on_complete(), 0)
+            except Exception:
+                pass
             self.fade_out()
             return False
         self.draw()
@@ -155,6 +165,9 @@ class TestScreen(Screen):
         self.user_answers = []
         self.correct_answers = []
         self.answers_log = []
+        self.adaptive = AdaptiveController()
+        self.total_tasks = 0
+        self._timer_event = None
 
     def set_difficulty(self, difficulty):
         """Устанавливает уровень сложности для теста"""
@@ -164,19 +177,57 @@ class TestScreen(Screen):
     def on_enter(self):
         """Вызывается при входе на экран"""
         self.clear_widgets()
+        # Если требуется показать 3-2-1 перед стартом, запускаем отсчёт
+        if getattr(self, '_do_countdown', False):
+            self._do_countdown = False
+            self.start_countdown()
+            return
+
         self.reset_test()  # Сбрасываем все данные теста
         self.generate_tasks()  # Генерируем новые задачи
         self.show_current_task()  # Показываем первое задание
 
+    def start_countdown(self, start=3):
+        """Показывает 3-2-1 в центре экрана, затем запускает тест."""
+        # Простой полноэкранный лейбл для отсчёта
+        overlay = MDLabel(
+            text=str(start),
+            halign='center',
+            valign='middle',
+            font_style='H2',
+            theme_text_color='Custom',
+            text_color=(1, 1, 1, 1),
+            size_hint=(1, 1)
+        )
+        self.clear_widgets()
+        self.add_widget(overlay)
+
+        def tick(dt):
+            nonlocal start
+            start -= 1
+            if start <= 0:
+                # очищаем и стартуем тест
+                self.clear_widgets()
+                Clock.unschedule(event)
+                self.reset_test()
+                self.generate_tasks()
+                self.show_current_task()
+                return
+            overlay.text = str(start)
+
+        event = Clock.schedule_interval(tick, 1)
+
     def generate_tasks(self):
         """Генерирует задачи с учетом выбранной сложности"""
+        # Генерируем задачи в едином уровне сложности, но с вариациями внутри генераторов
         self.tasks = [
-            ('внимание', ) + generate_attention_task(),
-            ('логика', ) + generate_logic_task(difficulty=self.difficulty),
-            ('обработка информации', ) + generate_processing_task(difficulty=self.difficulty),
-            ('счет в уме', ) + generate_math_task(difficulty=self.difficulty),
-            ('память', ) + generate_memory_task()
+            ('внимание',) + generate_attention_task(),
+            ('логика',) + generate_logic_task(),
+            ('обработка информации',) + generate_processing_task(),
+            ('счет в уме',) + generate_math_task(),
+            ('память',) + generate_memory_task()
         ]
+        self.total_tasks = len(self.tasks)
 
     def show_current_task(self):
         layout = MDBoxLayout(orientation='vertical', padding="20dp", spacing="15dp")
@@ -227,7 +278,19 @@ class TestScreen(Screen):
 
             self.circular_timer = None
             if category not in ['логика', 'счет в уме']:
-                self.circular_timer = CircularCountdown(total_time=4)
+                # Подстраиваем время показа последовательности по длине текста
+                try:
+                    words = len(str(sequence).split())
+                    chars = len(str(sequence))
+                    # Базовое время: 0.6s на слово, минимум 3, максимум 10
+                    total_time = max(3, min(10, 0.6 * words + 1))
+                    # Если текст длинный по символам — добавим немного
+                    if chars > 80:
+                        total_time += 2
+                except Exception:
+                    total_time = 4
+
+                self.circular_timer = CircularCountdown(total_time=total_time)
                 self.circular_timer.size_hint = (None, None)
                 self.circular_timer.size = ("200dp", "200dp")
                 self.circular_timer.pos_hint = {"center_x": 0.5}
@@ -238,24 +301,50 @@ class TestScreen(Screen):
                 font_style="H6"
             )
 
+            # Progress: label + bar
+            progress_layout = MDBoxLayout(orientation='vertical', size_hint_y=None, height='64dp', spacing='6dp')
+            self.progress_label = MDLabel(text=f"Задание {self.current_index+1} / {self.total_tasks}", halign='center', font_style='Subtitle1')
+            self.progress_bar = MDProgressBar(value=0)
+            progress_layout.add_widget(self.progress_label)
+            progress_layout.add_widget(self.progress_bar)
+            layout.add_widget(progress_layout)
+
             layout.add_widget(self.task_label)
 
             if self.circular_timer:
                 layout.add_widget(self.circular_timer)
-                Clock.schedule_interval(self.circular_timer.update, 1 / 60)
+                # Отменим предыдущий event, если он остался
+                try:
+                    if self._timer_event is not None:
+                        Clock.unschedule(self._timer_event)
+                except Exception:
+                    pass
+                self._timer_event = Clock.schedule_interval(self.circular_timer.update, 1 / 60)
 
             layout.add_widget(self.question_label)
             self.add_widget(layout)
 
             if category not in ['логика', 'счет в уме']:
-                Clock.schedule_once(lambda dt: self.hide_sequence(category), 4)
+                # Используем callback на окончание таймера вместо отдельного schedule_once
+                self.circular_timer._on_complete = lambda: self.hide_sequence(category)
             else:
                 self.question_label.text = question
                 self.answer_input.opacity = 1
                 self.answer_input.disabled = False
                 self.check_btn.opacity = 1
                 self.check_btn.disabled = False
+
+            # Обновляем прогресс внутри ветки активного задания
+            try:
+                if hasattr(self, 'progress_bar'):
+                    pct = (self.current_index / max(1, self.total_tasks)) * 100
+                    self.progress_bar.value = pct
+                    self.progress_label.text = f"Задание {self.current_index+1} / {self.total_tasks}"
+            except Exception:
+                pass
         else:
+            # Нет активных заданий — показываем финальный экран
+            finish_layout = MDBoxLayout(orientation='vertical', padding='20dp', spacing='15dp')
             finish_label = MDLabel(
                 text="Тест завершён!",
                 halign="center",
@@ -266,9 +355,9 @@ class TestScreen(Screen):
                 on_press=self.finish_test,
                 pos_hint={"center_x": 0.5}
             )
-            layout.add_widget(finish_label)
-            layout.add_widget(finish_btn)
-            self.add_widget(layout)
+            finish_layout.add_widget(finish_label)
+            finish_layout.add_widget(finish_btn)
+            self.add_widget(finish_layout)
 
     def submit_answer(self, instance):
         user_answer = self.answer_input.text.strip()
@@ -278,75 +367,7 @@ class TestScreen(Screen):
 
         is_correct = False
 
-        # Определяем уровень сложности
-        difficulty = "easy"
-
-        if category == 'счет в уме':
-            if '+' in task or '-' in task:
-                # Простые операции: всегда easy
-                difficulty = "easy"
-
-            elif '*' in task:
-                parts = task.split('*')
-                a_str, b_str = parts[0].strip(), parts[1].strip()
-                a_len = len(a_str)
-                b_len = len(b_str)
-
-                if a_len >= 3 or b_len >= 3:
-                    difficulty = "hard"
-                elif a_len == 2 or b_len == 2:
-                    difficulty = "medium"
-                else:
-                    difficulty = "easy"
-
-            elif '/' in task:
-                parts = task.split('/')
-                a_str, b_str = parts[0].strip(), parts[1].strip()
-                a_len = len(a_str)
-                b_len = len(b_str)
-
-                if a_len >= 3 or b_len >= 3:
-                    difficulty = "hard"
-                elif a_len == 2 or b_len == 2:
-                    difficulty = "medium"
-                else:
-                    difficulty = "easy"
-
-            elif '√' in task:
-                number_str = task.replace('√', '').strip()
-                if len(number_str) >= 4:
-                    difficulty = "hard"
-                elif len(number_str) == 3:
-                    difficulty = "medium"
-                else:
-                    difficulty = "easy"
-
-        elif category == 'логика':
-            numbers = [int(s) for s in task.split('=')[:-1] if s.strip().isdigit()]
-            if any(n >= 1000 for n in numbers):
-                difficulty = "hard"
-            elif any(100 <= n < 1000 for n in numbers):
-                difficulty = "medium"
-            else:
-                difficulty = "easy"
-
-        elif category == 'внимание':
-            difficulty = "easy"
-
-        elif category == 'обработка информации':
-            # Чем больше символов и сложнее условие — тем выше сложность
-            if '?' in task and task.count('?') >= 5:
-                difficulty = "hard"
-            elif '?' in task:
-                difficulty = "medium"
-            else:
-                difficulty = "easy"
-
-        elif category == 'память':
-            difficulty = "medium"
-
-
-        # Проверка ответа
+        # Проверка ответа (расширяем для более интересных форматов)
         if category == 'внимание':
             is_correct = check_attention_answer(user_answer, answer)
         elif category == 'логика':
@@ -383,25 +404,60 @@ class TestScreen(Screen):
         )
         dialog.open()
 
-        # Сохраняем результат с категорией и сложностью
+        # Сохраняем результат с категорией и очками, рассчитываем очки по сложности выражения
+        def calc_points(task_str):
+            # Более существенные баллы: скобки — 8, умножение/деление — 5, прочее — 2
+            if any(ch in task_str for ch in ['(', ')']):
+                return 8
+            if any(op in task_str for op in ['*', '/']):
+                return 5
+            return 2
+
+        points = calc_points(task) if is_correct else 0
+
         self.answers_log.append({
             'category': category,
             'is_correct': is_correct,
-            'difficulty': difficulty
+            'points': points,
+            'task': task
         })
+        # обновляем адаптивный контроллер
+        try:
+            self.adaptive.update(category, is_correct)
+        except Exception:
+            pass
+
         self.user_answers.append(user_answer)
         self.current_index += 1
+        # если был запущен таймер обновления — отменим его, потому что пользователь ответил досрочно
+        try:
+            if self._timer_event is not None:
+                Clock.unschedule(self._timer_event)
+                self._timer_event = None
+        except Exception:
+            pass
 
     def hide_sequence(self, category):
         if category not in ['логика', 'счет в уме']:
             self.task_label.text = ""
 
+        # Текущий таск: (category, sequence, question, answer)
         _, task, question, answer = self.tasks[self.current_index]
         self.question_label.text = question
 
         # Скрываем таймер, если он был
         if hasattr(self, 'circular_timer') and self.circular_timer:
-            self.circular_timer.stop()
+            try:
+                # Отменим event обновления
+                if self._timer_event is not None:
+                    Clock.unschedule(self._timer_event)
+                    self._timer_event = None
+            except Exception:
+                pass
+            try:
+                self.circular_timer.stop()
+            except Exception:
+                pass
             self.circular_timer = None
 
         # Активируем ввод
@@ -421,7 +477,18 @@ class TestScreen(Screen):
     def next_task(self):
         """Переход к следующему заданию"""
         self.clear_widgets()
-        self.show_current_task()
+        # Перейдём к следующему заданию; не перегенерируем весь список, чтобы
+        # можно было корректно показать прогресс до конца теста.
+        if self.current_index < len(self.tasks):
+            self.show_current_task()
+        else:
+            # Показываем финальный экран
+            layout = MDBoxLayout(orientation='vertical', padding='20dp', spacing='15dp')
+            finish_label = MDLabel(text="Тест завершён!", halign='center', font_style='H5')
+            finish_btn = MDRaisedButton(text='Посмотреть результаты', on_press=self.finish_test, pos_hint={'center_x':0.5})
+            layout.add_widget(finish_label)
+            layout.add_widget(finish_btn)
+            self.add_widget(layout)
 
     def finish_test(self, instance=None):
         """Завершение теста и переход к результатам"""

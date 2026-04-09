@@ -202,7 +202,10 @@ class MenuScreen(Screen):
         fade_out(0)
 
     def start_test(self, instance):
-        self.manager.current = 'difficulty'
+        # Помечаем, что при входе на экран теста нужно показать обратный отсчёт
+        test_screen = self.manager.get_screen('test')
+        setattr(test_screen, '_do_countdown', True)
+        self.manager.current = 'test'
 
     def show_stats(self, instance):
         self.manager.current = 'result'
