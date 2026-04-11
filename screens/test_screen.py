@@ -405,15 +405,29 @@ class TestScreen(Screen):
         dialog.open()
 
         # Сохраняем результат с категорией и очками, рассчитываем очки по сложности выражения
-        def calc_points(task_str):
-            # Более существенные баллы: скобки — 8, умножение/деление — 5, прочее — 2
-            if any(ch in task_str for ch in ['(', ')']):
-                return 8
-            if any(op in task_str for op in ['*', '/']):
-                return 5
-            return 2
+        def calc_points(task_str, category):
+            # Увеличенные баллы за счет в уме:
+            # - Цепочки из 3-4 операций или скобки — 15 баллов
+            # - Возведение в степень или проценты — 12 баллов
+            # - Умножение/деление с двузначными числами — 10 баллов
+            # - Простые операции — 5 баллов
+            if category == 'счет в уме':
+                if task_str.count('(') >= 2 or task_str.count(')') >= 2:
+                    return 15  # сложные цепочки
+                if '^' in task_str or '%' in task_str:
+                    return 12  # степени и проценты
+                if any(op in task_str for op in ['*', '/']):
+                    return 10  # умножение/деление
+                return 8  # сложение/вычитание
+            else:
+                # Для других категорий
+                if any(ch in task_str for ch in ['(', ')']):
+                    return 8
+                if any(op in task_str for op in ['*', '/']):
+                    return 5
+                return 3
 
-        points = calc_points(task) if is_correct else 0
+        points = calc_points(task, category) if is_correct else 0
 
         self.answers_log.append({
             'category': category,

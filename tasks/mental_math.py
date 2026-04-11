@@ -1,4 +1,5 @@
 import random
+import math
 
 
 def _format_answer(value):
@@ -11,32 +12,34 @@ def _format_answer(value):
 
 
 def generate_task(difficulty="medium"):
-    """Генерирует арифметическое или sqrt задание.
+    """Генерирует арифметическое или sqrt задание с повышенной сложностью.
 
-    Для операций умножения/деления избегаем трёхзначных множителей: вместо
-    100*100 генерируем комбинированное выражение с двумя-значными числами,
-    например `(10*23)/12`.
+    Для hard уровня добавляем:
+    - Цепочки из 3-4 операций
+    - Возведение в квадрат/куб
+    - Проценты от чисел
+    - Комбинированные выражения со скобками
     """
-    task_type = random.choice(['arith', 'sqrt'])
+    task_type = random.choice(['arith', 'sqrt', 'power', 'percent'])
 
     if task_type == 'arith':
-        # easy: простые операции
+        # easy: простые операции с однозначными и двузначными числами
         if difficulty == 'easy':
-            a = random.randint(1, 20)
-            b = random.randint(1, 20)
+            a = random.randint(5, 50)
+            b = random.randint(2, 30)
             op = random.choice(['+', '-', '*', '/'])
 
             if op == '/':
                 # выбираем желаемый результат: целое или с .5
                 if random.random() < 0.3:
                     # половинчатый результат
-                    r = random.randint(1, 10) + 0.5
+                    r = random.randint(1, 15) + 0.5
                     # b должен быть чётным чтобы a = r*b было целым
-                    b = random.choice([i for i in range(2, 21) if i % 2 == 0])
+                    b = random.choice([i for i in range(2, 31) if i % 2 == 0])
                     a = int(r * b)
                 else:
-                    r = random.randint(1, 10)
-                    b = random.randint(1, 10)
+                    r = random.randint(1, 15)
+                    b = random.randint(1, 15)
                     a = r * b
 
                 correct_result = a / b
@@ -45,56 +48,71 @@ def generate_task(difficulty="medium"):
 
             task = f"{a} {op} {b}"
 
-        # medium: выражение из двух операций — особые правила по размерам чисел
+        # medium: выражение из 2-3 операций с увеличенными диапазонами
         elif difficulty == 'medium':
             attempts = 0
-            while attempts < 400:
+            while attempts < 500:
                 attempts += 1
-                ops = random.choices(['+', '-', '*', '/'], k=2)
-                # Вариации: если внутри скобок '*' или '/', делаем однозначные числа внутри;
-                # если внутри '+' или '-', делаем внутри 3- и 2-значные числа.
-                if ops[0] in ['*', '/']:
-                    a = random.randint(2, 9)
-                    b = random.randint(2, 9)
-                else:
-                    a = random.randint(100, 999)
-                    b = random.randint(10, 99)
+                num_ops = random.choice([2, 3])
+                
+                if num_ops == 2:
+                    ops = random.choices(['+', '-', '*', '/'], k=2)
+                    # Вариации: если внутри скобок '*' или '/', делаем однозначные числа внутри;
+                    # если внутри '+' или '-', делаем внутри 3- и 2-значные числа.
+                    if ops[0] in ['*', '/']:
+                        a = random.randint(3, 15)
+                        b = random.randint(3, 15)
+                    else:
+                        a = random.randint(100, 999)
+                        b = random.randint(10, 99)
 
-                # Правила для третьего числа в зависимости от внешней операции
-                if ops[1] in ['*', '/']:
-                    c = random.randint(10, 99)
-                else:
-                    c = random.randint(1, 99)
+                    # Правила для третьего числа в зависимости от внешней операции
+                    if ops[1] in ['*', '/']:
+                        c = random.randint(10, 50)
+                    else:
+                        c = random.randint(1, 150)
 
-                expr = f"({a}{ops[0]}{b}){ops[1]}{c}"
+                    expr = f"({a}{ops[0]}{b}){ops[1]}{c}"
+                else:
+                    # 3 операции: (a op1 b) op2 c op3 d
+                    ops = random.choices(['+', '-', '*', '/'], k=3)
+                    a = random.randint(5, 30)
+                    b = random.randint(5, 30)
+                    c = random.randint(3, 20)
+                    d = random.randint(2, 15)
+                    
+                    # Избегаем деления на ноль и слишком сложных дробей
+                    if ops[0] in ['*', '/'] and ops[1] in ['*', '/']:
+                        continue
+                    
+                    expr = f"(({a}{ops[0]}{b}){ops[1]}{c}){ops[2]}{d}"
+                
                 try:
                     val = eval(expr)
                 except Exception:
                     continue
 
-                # допустимы только значения с шагом 0.5
-                if abs(val * 2 - round(val * 2)) < 1e-9:
+                # допустимы только значения с шагом 0.5 и в разумных пределах
+                if abs(val * 2 - round(val * 2)) < 1e-9 and -10000 < val < 10000:
                     correct_result = val
                     task = expr
                     break
             else:
-                # fallback — простое выражение с допустимым результатом (двузначные умножения)
-                a = random.randint(10, 99)
-                b = random.randint(10, 99)
+                # fallback — простое выражение с допустимым результатом
+                a = random.randint(20, 99)
+                b = random.randint(10, 50)
                 task = f"{a}*{b}"
                 correct_result = a * b
 
-        # hard: выражения с произведением / делением, допускаем .5
+        # hard: сложные выражения с 3-4 операциями, степени, комбинированные
         else:
-            for _ in range(500):
-                # hard: пробуем разные вариации. В одной из них — (a*b)/c с двузначными a,b,c;
-                # в другой — (a+b)/c где a,b — трех- и двузначные,
-                # и в третьей — простое умножение двузначных.
-                variant = random.choice(['prod_div', 'sum_div', 'mul2'])
+            for _ in range(600):
+                variant = random.choice(['prod_div', 'sum_div', 'mul2', 'chain3', 'chain4', 'mixed'])
+                
                 if variant == 'prod_div':
-                    a = random.randint(10, 99)
-                    b = random.randint(10, 99)
-                    c = random.randint(10, 99)
+                    a = random.randint(15, 99)
+                    b = random.randint(10, 50)
+                    c = random.randint(5, 25)
                     prod = a * b
                     if prod % c == 0 or (prod * 2) % c == 0:
                         expr = f"({a}*{b})/{c}"
@@ -102,18 +120,54 @@ def generate_task(difficulty="medium"):
                         task = expr
                         break
                 elif variant == 'sum_div':
-                    a = random.randint(100, 999)
-                    b = random.randint(10, 99)
-                    c = random.randint(2, 12)
+                    a = random.randint(200, 999)
+                    b = random.randint(50, 200)
+                    c = random.randint(3, 15)
                     s = a + b
                     if s % c == 0 or (s * 2) % c == 0:
                         expr = f"({a}+{b})/{c}"
                         correct_result = s / c
                         task = expr
                         break
+                elif variant == 'chain3':
+                    # Цепочка: ((a * b) + c) / d
+                    a = random.randint(8, 25)
+                    b = random.randint(8, 25)
+                    c = random.randint(20, 100)
+                    d = random.randint(3, 12)
+                    val = ((a * b) + c) / d
+                    if abs(val * 2 - round(val * 2)) < 1e-9:
+                        expr = f"(({a}*{b})+{c})/{d}"
+                        correct_result = val
+                        task = expr
+                        break
+                elif variant == 'chain4':
+                    # Цепочка из 4 операций: (((a * b) + c) / d) + e
+                    a = random.randint(5, 20)
+                    b = random.randint(5, 20)
+                    c = random.randint(10, 80)
+                    d = random.randint(2, 10)
+                    e = random.randint(5, 30)
+                    val = (((a * b) + c) / d) + e
+                    if abs(val * 2 - round(val * 2)) < 1e-9 and val < 5000:
+                        expr = f"((({a}*{b})+{c})/{d})+{e}"
+                        correct_result = val
+                        task = expr
+                        break
+                elif variant == 'mixed':
+                    # Смешанное: (a + b) * c - d
+                    a = random.randint(50, 200)
+                    b = random.randint(30, 100)
+                    c = random.randint(3, 8)
+                    d = random.randint(20, 150)
+                    val = (a + b) * c - d
+                    expr = f"({a}+{b})*{c}-{d}"
+                    correct_result = val
+                    task = expr
+                    break
                 else:
-                    a = random.randint(10, 99)
-                    b = random.randint(10, 99)
+                    a = random.randint(20, 99)
+                    b = random.randint(15, 60)
                     expr = f"{a}*{b}"
                     correct_result = a * b
                     task = expr
@@ -126,14 +180,56 @@ def generate_task(difficulty="medium"):
         if difficulty == "easy":
             number = random.randint(1, 15)
         elif difficulty == "medium":
-            number = random.randint(15, 55)
+            number = random.randint(12, 45)
         elif difficulty == "hard":
-            number = random.randint(55, 185)
+            number = random.randint(35, 150)
 
         square = number * number
         task = f"√{square}"
         question = "Чему равен квадратный корень из этого числа?"
         correct_answer = str(number)
+    
+    elif task_type == 'power':
+        # Возведение в степень
+        if difficulty == "easy":
+            base = random.randint(2, 8)
+            exp = 2
+        elif difficulty == "medium":
+            base = random.randint(5, 15)
+            exp = random.choice([2, 3])
+        else:  # hard
+            base = random.randint(10, 25)
+            exp = random.choice([2, 3])
+        
+        result = base ** exp
+        task = f"{base}^{exp}"
+        question = "Чему равно это число в степени?"
+        correct_answer = str(result)
+    
+    elif task_type == 'percent':
+        # Вычисление процентов - только целые или .5 результаты
+        if difficulty == "easy":
+            percent = random.choice([10, 20, 25, 30, 40, 50])
+            # Число должно делиться на 100/gcd(percent, 100)
+            divisor = 100 // math.gcd(int(percent), 100)
+            multiplier = random.randint(2, 20)
+            number = divisor * multiplier
+        elif difficulty == "medium":
+            percent = random.choice([5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 75, 80])
+            divisor = 100 // math.gcd(int(percent), 100)
+            multiplier = random.randint(2, 30)
+            number = divisor * multiplier
+        else:  # hard
+            percent = random.choice([5, 10, 12, 15, 20, 24, 25, 30, 35, 40, 45, 48, 50, 60, 70, 75, 80, 90])
+            divisor = 100 // math.gcd(int(percent), 100)
+            multiplier = random.randint(3, 40)
+            number = divisor * multiplier
+        
+        result = int((percent / 100) * number)
+        
+        task = f"{percent}% от {number}"
+        question = "Сколько это будет?"
+        correct_answer = str(result)
 
     return task, question, correct_answer
 
@@ -157,6 +253,10 @@ def check_math_answer(user_answer, correct_answer):
 
 # Тестирование
 if __name__ == "__main__":
+    print("=== ТЕСТ ГЕНЕРАЦИИ ЗАДАЧ ===\n")
     for d in ['easy', 'medium', 'hard']:
-        task, question, answer = generate_task(difficulty=d)
-        print(d, '->', task, question, '=>', answer)
+        print(f"--- {d.upper()} ---")
+        for i in range(10):
+            task, question, answer = generate_task(difficulty=d)
+            print(f"{i+1}. {task:35s} => {answer}")
+        print()
