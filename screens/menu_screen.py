@@ -1,9 +1,10 @@
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.screenmanager import Screen
 from kivy.lang import Builder
-from kivymd.uix.button import MDRaisedButton
+from kivymd.uix.button import MDRaisedButton, MDIconButton
 from kivymd.uix.label import MDLabel
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.card import MDCard
 from kivy.uix.video import Video
 from kivy.clock import Clock
 from kivy.animation import Animation
@@ -11,6 +12,7 @@ from kivy.core.window import Window
 from kivy.utils import platform
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
+from kivy.metrics import dp
 import sys
 
 KV = '''
@@ -20,6 +22,16 @@ KV = '''
     height: "65dp"
     md_bg_color: app.theme_cls.primary_light
     elevation: 12
+
+<GlowCard@MDCard>:
+    orientation: "vertical"
+    size_hint: 0.85, None
+    height: "75dp"
+    padding: "10dp"
+    spacing: "10dp"
+    radius: [15]
+    elevation: 8
+    ripple_behavior: True
 '''
 
 Builder.load_string(KV)
@@ -31,10 +43,12 @@ class MenuScreen(Screen):
         self.video = None
         self.title_container = None
         self._title_letters = []
+        self.buttons_list = []
         Clock.schedule_once(self.setup_background)
         Clock.schedule_once(self.create_ui, 0.2)
 
     def setup_background(self, dt):
+        # Градиентный фон с анимацией
         self.video = Video(
             source="files/video_menu.mp4",
             state="play",
@@ -42,91 +56,117 @@ class MenuScreen(Screen):
             allow_stretch=True,
             keep_ratio=False
         )
-        self.video.opacity = 0.8
+        self.video.opacity = 0.6
         self.video.size_hint = (1, 1)
         self.video.pos_hint = {"center_x": 0.5, "center_y": 0.5}
         self.add_widget(self.video, index=0)
+        
+        # Добавляем полупрозрачный оверлей для лучшей читаемости
+        overlay = MDBoxLayout(
+            size_hint=(1, 1),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            md_bg_color=[0, 0, 0, 0.4]
+        )
+        self.add_widget(overlay, index=1)
 
     def create_ui(self, dt):
         layout = FloatLayout()
 
-        # Заголовок (контейнер)
+        # Заголовок с неоновым эффектом
         self.title_container = FloatLayout(
             size_hint=(1, None),
-            height="60dp",
-            pos_hint={"top": 1}
+            height="80dp",
+            pos_hint={"top": 0.95}
         )
         layout.add_widget(self.title_container)
         Clock.schedule_once(lambda dt: self.animate_title("Clever_4"), 0.5)
 
-        # Блок кнопок
+        # Блок кнопок с улучшенным дизайном
         btn_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="25dp",
-            padding="20dp",
-            size_hint=(0.8, None),
-            pos_hint={"center_x": 0.5, "center_y": 0.45},
+            spacing="20dp",
+            padding=["30dp", "20dp"],
+            size_hint=(0.9, None),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
         )
         btn_layout.bind(minimum_height=btn_layout.setter('height'))
 
-        def button_animation(instance):
-            anim = Animation(opacity=0.8, duration=0.1) + Animation(opacity=1, duration=0.1)
-            anim.start(instance)
-
-        # Фабрика кнопок с иконкой
-        def build_icon_button(text, image_path, bg_color, callback):
-            box = MDRaisedButton(
+        # Фабрика кнопок с карточками и эффектами
+        def build_icon_button(text, image_path, color_start, color_end, callback):
+            card = MDCard(
                 size_hint=(1, None),
-                height="65dp",
-                md_bg_color=bg_color,
-                elevation=12,
-                on_press=lambda x: [button_animation(x), callback(x)]
+                height="70dp",
+                radius=[15],
+                elevation=10,
+                ripple_behavior=True,
+                md_bg_color=color_start,
             )
-
+            
             inner = BoxLayout(
                 orientation="horizontal",
-                spacing="12dp",
-                padding=[10, 0, 10, 0],  # убираем вертикальный отступ
+                spacing="15dp",
+                padding=["15dp", "10dp"],
                 size_hint=(1, 1),
-                pos_hint={"center_y": 0.5}
             )
 
+            # Иконка с тенью
+            icon_container = FloatLayout(size_hint=(None, None), size=("40dp", "40dp"))
             icon = Image(
                 source=image_path,
                 size_hint=(None, None),
-                size=("32dp", "32dp"),
+                size=("36dp", "36dp"),
                 allow_stretch=True,
-                pos_hint={"center_y": 0.5}  # центр по вертикали
+                pos_hint={"center_x": 0.5, "center_y": 0.5}
             )
+            icon_container.add_widget(icon)
 
+            # Текст с градиентным эффектом
             label = MDLabel(
                 text=text,
                 halign="left",
                 valign="middle",
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 1),
-                font_size="20sp",
-                size_hint=(1, 1)
+                font_size="22sp",
+                bold=True,
+                size_hint=(1, 1),
+                markup=True
             )
-            label.bind(size=label.setter('text_size'))  # выравнивание по центру
+            label.bind(size=label.setter('text_size'))
 
-            inner.add_widget(icon)
+            inner.add_widget(icon_container)
             inner.add_widget(label)
-            box.add_widget(inner)
-            return box
+            card.add_widget(inner)
+            
+            # Анимация при нажатии
+            def on_press(instance):
+                anim = Animation(md_bg_color=color_end, duration=0.15) + \
+                       Animation(md_bg_color=color_start, duration=0.15)
+                anim.start(instance)
+                callback(instance)
+            
+            card.bind(on_press=on_press)
+            return card
 
-        # Кнопки
+        # Кнопки с градиентными цветами (start_color, end_color)
         start_btn = build_icon_button(
-            "Начать тест", "files/pict/test.png", [0.2, 0.8, 0.4, 1], self.start_test
+            "Начать тест", "files/pict/test.png", 
+            [0.15, 0.75, 0.35, 1], [0.25, 0.9, 0.45, 1], 
+            self.start_test
         )
         stats_btn = build_icon_button(
-            "Статистика", "files/pict/stat.png", [0.1, 0.6, 0.8, 1], self.show_stats
+            "Статистика", "files/pict/stat.png", 
+            [0.08, 0.55, 0.75, 1], [0.15, 0.7, 0.9, 1], 
+            self.show_stats
         )
         exit_btn = build_icon_button(
-            "Выход", "files/pict/exit.png", [0.8, 0.2, 0.2, 1], self.exit_app
+            "Выход", "files/pict/exit.png", 
+            [0.75, 0.15, 0.15, 1], [0.9, 0.25, 0.25, 1], 
+            self.exit_app
         )
 
         for btn in [start_btn, stats_btn, exit_btn]:
+            self.buttons_list.append(btn)
             btn_layout.add_widget(btn)
 
         layout.add_widget(btn_layout)
@@ -142,7 +182,21 @@ class MenuScreen(Screen):
         for i, char in enumerate(text):
             x_pos = Window.width / 2 - (total_len / 2.0 * spacing) + (i * spacing)
 
-            # Тень — чёрная
+            # Неоновое свечение (голубое)
+            glow = MDLabel(
+                text=char,
+                halign="center",
+                font_style="H4",
+                theme_text_color="Custom",
+                text_color=(0, 0.8, 1, 0),
+                bold=True,
+                font_size="42sp",
+                size_hint=(None, None),
+                size=("50dp", "70dp"),
+                pos=(x_pos, 445),
+            )
+
+            # Тень — чёрная с размытием
             shadow = MDLabel(
                 text=char,
                 halign="center",
@@ -150,10 +204,10 @@ class MenuScreen(Screen):
                 theme_text_color="Custom",
                 text_color=(0, 0, 0, 0),
                 bold=True,
-                font_size="36sp",
+                font_size="38sp",
                 size_hint=(None, None),
-                size=("40dp", "60dp"),
-                pos=(x_pos + 1, 442),
+                size=("45dp", "65dp"),
+                pos=(x_pos + 2, 438),
             )
 
             # Основной текст — белый
@@ -164,21 +218,24 @@ class MenuScreen(Screen):
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 0),
                 bold=True,
-                font_size="36sp",
+                font_size="38sp",
                 size_hint=(None, None),
-                size=("40dp", "60dp"),
-                pos=(x_pos, 450),
+                size=("45dp", "65dp"),
+                pos=(x_pos, 445),
             )
 
+            self.title_container.add_widget(glow)
             self.title_container.add_widget(shadow)
             self.title_container.add_widget(label)
-            self._title_letters.append((shadow, label))
+            self._title_letters.append((glow, shadow, label))
 
         def fade_in(index):
             if index < len(self._title_letters):
-                shadow, label = self._title_letters[index]
-                anim_shadow = Animation(text_color=(0, 0, 0, 1), duration=0.2)
+                glow, shadow, label = self._title_letters[index]
+                anim_glow = Animation(text_color=(0, 0.9, 1, 0.8), duration=0.3)
+                anim_shadow = Animation(text_color=(0, 0, 0, 0.7), duration=0.2)
                 anim_label = Animation(text_color=(1, 1, 1, 1), duration=0.2)
+                anim_glow.start(glow)
                 anim_shadow.start(shadow)
                 anim_label.start(label)
                 Clock.schedule_once(lambda dt: fade_in(index + 1), interval)
@@ -190,9 +247,11 @@ class MenuScreen(Screen):
     def remove_title(self, dt, interval=0.08):
         def fade_out(index):
             if index < len(self._title_letters):
-                shadow, label = self._title_letters[index]
+                glow, shadow, label = self._title_letters[index]
+                anim_glow = Animation(text_color=(0, 0.9, 1, 0), duration=0.25)
                 anim_shadow = Animation(text_color=(0, 0, 0, 0), duration=0.2)
                 anim_label = Animation(text_color=(1, 1, 1, 0), duration=0.2)
+                anim_glow.start(glow)
                 anim_shadow.start(shadow)
                 anim_label.start(label)
                 Clock.schedule_once(lambda dt: fade_out(index + 1), interval)
